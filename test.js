@@ -36,3 +36,5 @@ var syntax = {
 };
 
 var result = new Compiler(syntax).toString();
+//console.log(result);
+var StateMachine = (Function("var module={};"+result + "return module.exports;"))();
