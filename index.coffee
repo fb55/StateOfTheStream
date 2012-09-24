@@ -32,7 +32,7 @@ class Compiler
 				if typeof rule is "object"
 					if rule.char?
 						if Array.isArray rule.char
-							rule.char.push(char) 
+							rule.char.push(char) unless char in rule.char
 						else if rule.char isnt char
 							rule.char = [rule.char, char]
 					else
@@ -84,7 +84,7 @@ class Compiler
 				}
 				"""
 			else
-				""
+				continue
 		)
 
 		@parsedRules[name] = 
@@ -101,18 +101,20 @@ class Compiler
 				}
 			} else {
 				var char = this._data[this._index];
-				#{
-					if rules.length > 0
-						rules.join(" else ") + "\nelse {" +
-							if elseRule then @renderAction elseRule, name
-							else "this._cbs.onerror(Error('Unmatched char ' + String.fromCharCode(c)));"
-						+ "}"
-					else
-						if elseRule then @renderAction elseRule, name
-						else "" #TODO should an error be thrown?
-				}
-			}
 			"""
+
+		if rules.length > 0
+			@parsedRules[name] += rules.join " else "
+			@parsedRules[name] += "\nelse "
+
+			if elseRule
+				@parsedRules[name] += "{#{@renderAction elseRule, name}}"
+			else 
+				@parsedRules[name] += "this._cbs.onerror(Error('Unmatched char ' + String.fromCharCode(c)));"
+
+		else if elseRule then @parsedRules[name] += @renderAction elseRule, name
+		
+		@parsedRules[name] + "}"
 
 	renderAction: (rule, state) ->
 		result = ""
