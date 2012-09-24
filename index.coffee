@@ -1,4 +1,4 @@
-class Parser
+class Compiler
 	constructor: (@states) ->
 		@names = {__proto__:null}
 		@parsedRules = {}
@@ -17,7 +17,7 @@ class Parser
 			throw Error("state #{i} exists already") if i of @names and @names[i] isnt i
 			@names[i] = i
 
-		throw Error("no start state available (needs to be named 0") unless 0 of @names
+		throw Error("no start state available (needs to be named 0)") unless 0 of @names
 
 		@parse @names[0] #parse the initial state
 
@@ -31,25 +31,28 @@ class Parser
 			state = for char, rule of state
 				if typeof rule is "object"
 					if rule.char?
-						rule.char.push(char) unless char in rule.char
+						if Array.isArray rule.char
+							rule.char.push(char) 
+						else if rule.char isnt char
+							rule.char = [rule.char, char]
 					else
-						rule.char = char
+						rule.char = [char]
 					rule
 				else {
 					nextState: rule
-					char: char
+					char: [char]
 				}
 
 		elseRule = null
 		eofRule = null
 
 		rules = (for rule in state
-			chars = rule.char if Array.isArray(rule.char) else [rule.char]
+			chars = if Array.isArray(rule.char) then rule.char else [rule.char]
 			allChars = {}
 			chars = 
 				(for char in chars
 					if char of allChars
-						throw Error "#{char if typeof char is "string" else String.fromCharCode char} exists twice"
+						throw Error "#{if typeof char is "string" then char else String.fromCharCode char} exists twice"
 					allChars[char] = true
 					if typeof char is "string"
 						if char.length isnt 1
@@ -130,7 +133,7 @@ class Parser
 				result += "this.indices['#{rule.index.saveAs}'] = this._index;"
 			if rule.index.restore?
 				result += "this._index = this.indices['#{rule.index.restore}'];"
-			else if rule.index.increase or not increase of rule.index
+			else if rule.index.increase or !(increase of rule.index)
 				result += "this._index += #{rule.index.increase or 1};"
 		else
 			result += "this._index++;"
@@ -138,20 +141,21 @@ class Parser
 		if typeof rule.nextState is "object" and nextState.restore
 			result += "this[this._stateCache['#{nextState.restore}']]();"
 		else
-			nextState = rule.nextState if typeof rule.nextState is "string" else rule.nextState.name
+			nextState = if typeof rule.nextState isnt "object" then rule.nextState else rule.nextState.name
 
 			if nextState of @names
 				nextState = @names[nextState]
-			else throw Error "couldn't resolve state '#{nextState}'"
+			else
+				throw Error "couldn't resolve state '#{nextState}'"
 
 			#avoid infinite loops
 			if @currentlyRendered[nextState]
 				result += "this['#{nextState}']();"
 			else
+				prevState = @currentlyRendered[state] or false
 				@currentlyRendered[state] = true
 				result += @parse nextState #inline the next state
-				@currentlyRendered[state] = false
-
+				@currentlyRendered[state] = prevState
 		result
 
 	toString: () ->
@@ -205,3 +209,5 @@ StateMachine.prototype.getData = function(from, to){
 				"StateMachine.prototype['#{state}'] = function(){#{data}};"
 			).join("\n") +
 		"\nmodule.exports=StateMachine;"
+
+module.exports = Compiler
