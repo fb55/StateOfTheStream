@@ -127,9 +127,9 @@ class Parser
 
 		if typeof rule.index is "object"
 			if rule.index.saveAs?
-				result += "this._indexCache['#{rule.index.saveAs}'] = this._index;"
+				result += "this.indices['#{rule.index.saveAs}'] = this._index;"
 			if rule.index.restore?
-				result += "this._index = this._indexCache['#{rule.index.restore}'];"
+				result += "this._index = this.indices['#{rule.index.restore}'];"
 			else if rule.index.increase or not increase of rule.index
 				result += "this._index += #{rule.index.increase or 1};"
 		else
@@ -159,7 +159,7 @@ class Parser
 function StateMachine(cbs){
 	this._cbs = cbs;
 	this._stateCache = {__proto__:null};
-	this._indexCache = {__proto__:null};
+	this.indices = {__proto__:null};
 	this._data = new Buffer;
 	this._index = 0;
 	this._removedChars = 0; //chars that were cleaned
@@ -176,16 +176,16 @@ StateMachine.prototype.write = function(chunk){
 
 StateMachine.prototype._clean = function(){
 	var maxIndex = this._index, key;
-	for(key in this._indexCache){
-		if(this._indexCache[key] < maxIndex){
-			maxIndex = this._indexCache[key];
+	for(key in this.indices){
+		if(this.indices[key] < maxIndex){
+			maxIndex = this.indices[key];
 		}
 	}
 	if(maxIndex > 0){
 		this._data = this._data.slice(maxIndex);
 		this._index -= maxIndex;
-		for(key in this._indexCache){
-			this._indexCache[key] -= maxIndex;
+		for(key in this.indices){
+			this.indices[key] -= maxIndex;
 		}
 		this._removedChars += maxIndex;
 	}
@@ -195,6 +195,11 @@ StateMachine.prototype.end = function(chunk){
 	this._ended = true;
 	if(chunk) this.write(chunk);
 	else this[this._state]();
+};
+
+StateMachine.prototype.getData = function(from, to){
+	if(typeof to !== "number") to = this._index;
+	return this._data.slice(from, to);
 };
 		""" + (for state, data of @parsedRules
 				"StateMachine.prototype['#{state}'] = function(){#{data}};"
