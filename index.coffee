@@ -103,32 +103,21 @@ class Compiler
 				var char = this._data[this._index];
 			"""
 
-		if rules.length > 0
-			@parsedRules[name] += rules.join " else "
-			@parsedRules[name] += "\nelse "
-
-			if elseRule
-				@parsedRules[name] += "{#{@renderAction elseRule, name}}"
-			else 
-				@parsedRules[name] += "this._cbs.onerror(Error('Unmatched char ' + String.fromCharCode(c)));"
-
-		else if elseRule then @parsedRules[name] += @renderAction elseRule, name
+		if elseRule
+			rules.push "{#{@renderAction elseRule, name}}"
+		else
+			rules.push "this._cbs.onerror(Error('Unmatched char ' + String.fromCharCode(c)));"
 		
-		@parsedRules[name] + "}"
+		@parsedRules[name] += rules.join(" else ") + "}"
 
 	renderAction: (rule, state) ->
+		unless rule? then console.log state
 		result = ""
 		if "saveAs" of rule
 			result += "this._stateCache['#{rule.saveAs}'] = '#{state}';"
 
 		if "cb" of rule
 			result += "this._cbs['#{rule.cb}'](this._index);"
-
-		if typeof rule.replace is "object"
-			result +=
-				"""
-				//TODO replace
-				"""
 
 		if typeof rule.index is "object"
 			if rule.index.saveAs?
@@ -156,7 +145,8 @@ class Compiler
 			else
 				prevState = @currentlyRendered[state] or false
 				@currentlyRendered[state] = true
-				result += @parse nextState #inline the next state
+				result += "this['#{nextState}']();"
+				@parse nextState #TODO inline the next state
 				@currentlyRendered[state] = prevState
 		result
 
@@ -166,7 +156,7 @@ function StateMachine(cbs){
 	this._cbs = cbs;
 	this._stateCache = {__proto__:null};
 	this.indices = {__proto__:null};
-	this._data = new Buffer;
+	this._data = new Buffer(0);
 	this._index = 0;
 	this._removedChars = 0; //chars that were cleaned
 	this._state = "0";

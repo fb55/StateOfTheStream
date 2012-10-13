@@ -38,3 +38,8 @@ var syntax = {
 var result = new Compiler(syntax).toString();
 //console.log(result);
 var StateMachine = (Function("var module={};"+result + "return module.exports;"))();
+
+var cbs = ["a", "b", "end", "else"].reduce(function(o, e){ o[e] = console.log.bind(null, e); return o; }, {});
+var sm = new StateMachine(cbs);
+sm.write(new Buffer("caeb"));
+sm.end();

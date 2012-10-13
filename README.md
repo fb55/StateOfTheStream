@@ -26,12 +26,6 @@ Basic structure of accepted JSON:
 					saveAs: "name" || <num>
 					increase: false || <num> //defaults to 1
 					restore: "name" || <num>
-				},
-
-				replace: {
-					from: "name" || -<num> //stored index name or index relative to current index
-					to: "name" || -<num> || void 0 //stored index name or index relative to current index
-					content: "content"
 				}
 			}
 	} ||
