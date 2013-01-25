@@ -115,8 +115,6 @@ class Compiler
 	renderAction: (rule, state) ->
 		unless rule? then console.log state
 		result = ""
-		if "saveAs" of rule
-			result += "this._stateCache['#{rule.saveAs}'] = '#{state}';"
 
 		if "cb" of rule
 			result += "this._cbs['#{rule.cb}'](this._index);"
@@ -131,8 +129,8 @@ class Compiler
 		else
 			result += "this._index++;"
 
-		if typeof rule.nextState is "object" and nextState.restore
-			result += "this[this._stateCache['#{nextState.restore}']]();"
+		if typeof rule.nextState is "object" and "restore" of rule.nextState
+			result += "this[this._stateCache['#{rule.nextState.restore}']]();"
 		else
 			nextState = if typeof rule.nextState isnt "object" then rule.nextState else rule.nextState.name
 
